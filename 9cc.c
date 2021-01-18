@@ -25,6 +25,22 @@ struct Token {
 // current focussed token
 Token *token;
 
+char *user_input;
+
+//reports error duration
+void error_at(char *loc, char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+
+  int pos = loc - user_input;
+  fprintf(stderr,"%s\n", user_input);
+  fprintf(stderr, "%*s", pos, " ");
+  fprintf(stderr, "^");
+  vfprintf(stderr, fmt, ap);
+  fprintf(stderr, "\n");
+  exit(1);
+}
+
 // error handling function
 // takes same argument as printf()
 void error(char *fmt, ...) {
@@ -38,7 +54,7 @@ void error(char *fmt, ...) {
 // when next token matched expected symbol consume 1 token then return true
 // or return false
 bool consume(char op) {
-  if(token->kind != TK_RESERVED || token->str[0] != op)
+  if (token->kind != TK_RESERVED || token->str[0] != op)
     return false;
   token = token->next;
   return true;
@@ -48,8 +64,8 @@ bool consume(char op) {
 // when next token matched expected symbol consume 1 token
 // or throw error
 void expect(char op) {
-  if(token->kind != TK_RESERVED || token->str[0] != op)
-    error("not an expected symbol:'%c'", op) 
+  if (token->kind != TK_RESERVED || token->str[0] != op)
+    error_at(token->str, "not an expected symbol:'%c'", op);
   token = token->next;
 }
 
@@ -57,22 +73,22 @@ void expect(char op) {
 // when next token is a number consume 1 token and return it
 // or return error
 int expect_number() {
-  if(token->kind != TK_NUM)
-    error("not a number");
+  if (token->kind != TK_NUM)
+    error_at(token->str, "not a number");
   int val = token->val;
   token = token->next;
   return val;
 }
 
 bool at_eof() {
-  return token->next = TK_EOF;
+  return token->kind == TK_EOF;
 }
 
 //  generates new token after current token
 Token *new_token(TokenKind kind, Token *cur, char *str) {
   Token *tok = calloc(1, sizeof(Token));
   tok->kind = kind;
-  tok->str;
+  tok->str = str;
   cur->next = tok;
   return tok;
 }
@@ -101,7 +117,7 @@ Token *tokenize(char *p) {
       continue;
     }
 
-    error("cannot tokenize input")
+    error("cannot tokenize input");
 
   }
 
@@ -109,14 +125,15 @@ Token *tokenize(char *p) {
   return head.next;
 }
 
-int main (int argc, char **argv) {
-  if(argc =!2) {
-    "invalid quantity of arguments"
+int main(int argc, char **argv) {
+  if (argc =! 2) {
+    "invalid quantity of arguments";
     return 1;
   }
 
   // tokenize
-  token = token(argv[1]);
+  token = tokenize(argv[1]);
+  *user_input = &token; 
 
   // preparation
   printf(".intel_syntax noprefix\n");
@@ -129,13 +146,13 @@ int main (int argc, char **argv) {
   // output tokens
   while (!at_eof()) {
 
-    if consume('+') {
+    if (consume('+')) {
       printf("  add rax, %d\n", expect_number());
       continue;
     }
 
     expect('-');
-    printf(" sub rax, %d\n", expect_number());
+    printf("  sub rax, %d\n", expect_number());
   }
 
   printf("  ret\n");
